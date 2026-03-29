@@ -1,0 +1,247 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// This security rules file assumes the following data structures:
+//
+// Collection: /users/{userId}/students
+// Document ID: {studentId}
+// Fields:
+//   - id: string (required)
+//   - name: string (required, size < 100)
+//   - roomNumber: string (required)
+//   - phone: string (required)
+//   - idProof: string (required)
+//   - joinDate: string (required)
+//   - photo: string (optional)
+//   - documentProof: string (optional)
+//   - parentPhone: string (required)
+//   - workOrCollege: string (required)
+//
+// Collection: /users/{userId}/rooms
+// Document ID: {roomNumber}
+// Fields:
+//   - number: string (required)
+//   - status: string (required, enum: ["occupied", "vacant", "maintenance"])
+//   - capacity: integer (required, > 0)
+//   - currentOccupants: integer (required, >= 0)
+//   - type: string (required, enum: ["AC", "Non-AC"])
+//   - amenities: list (optional, strings)
+//
+// Collection: /users/{userId}/fees
+// Document ID: {feeId}
+// Fields:
+//   - id: string (required)
+//   - studentId: string (required)
+//   - totalAmount: number (required, >= 0)
+//   - paidAmount: number (required, >= 0)
+//   - balance: number (required)
+//   - status: string (required, enum: ["paid", "pending", "partial"])
+//   - paymentMode: string (optional, enum: ["Cash", "UPI", "Bank Transfer"])
+//   - dueDate: string (required)
+//   - month: string (required)
+//
+// Collection: /users/{userId}/complaints
+// Document ID: {complaintId}
+// Fields:
+//   - id: string (required)
+//   - studentId: string (required)
+//   - title: string (required, size < 200)
+//   - description: string (required, size < 2000)
+//   - status: string (required, enum: ["pending", "resolved", "in-progress"])
+//   - date: string (required)
+//
+// Collection: /users/{userId}/attendance
+// Document ID: {attendanceId}
+// Fields:
+//   - id: string (required)
+//   - studentId: string (required)
+//   - type: string (required, enum: ["entry", "exit"])
+//   - timestamp: string (required)
+//
+// Collection: /users/{userId}/announcements
+// Document ID: {announcementId}
+// Fields:
+//   - id: string (required)
+//   - title: string (required, size < 200)
+//   - content: string (required, size < 5000)
+//   - date: string (required)
+//
+// Collection: /users/{userId}/expenses
+// Document ID: {expenseId}
+// Fields:
+//   - id: string (required)
+//   - title: string (required, size < 200)
+//   - amount: number (required, >= 0)
+//   - category: string (required, enum: ["Groceries", "Utilities", "Rent", "Staff Salary", "Supplies", "Other"])
+//   - date: string (required)
+//   - description: string (optional, size < 1000)
+//
+// Collection: /users/{userId}/drawings
+// Document ID: {drawingId}
+// Fields:
+//   - id: string (required)
+//   - title: string (required, size < 200)
+//   - amount: number (required, >= 0)
+//   - date: string (required)
+//   - description: string (optional, size < 1000)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return (isAuthenticated() && request.auth.uid == userId) || userId == 'prasanth_uid';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "sriammansai2005@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidString(field, maxLen) {
+      return request.resource.data[field] is string && request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidEnum(field, allowedValues) {
+      return request.resource.data[field] in allowedValues;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidStudent() {
+      return hasRequiredFields(['id', 'name', 'roomNumber', 'phone', 'idProof', 'joinDate', 'parentPhone', 'workOrCollege']) &&
+             isValidString('name', 100) &&
+             isValidString('phone', 20) &&
+             isValidString('parentPhone', 20);
+    }
+
+    function isValidRoom() {
+      return hasRequiredFields(['number', 'status', 'capacity', 'currentOccupants', 'type']) &&
+             isValidEnum('status', ['occupied', 'vacant', 'maintenance']) &&
+             isValidEnum('type', ['AC', 'Non-AC']) &&
+             request.resource.data.capacity is int && request.resource.data.capacity > 0 &&
+             request.resource.data.currentOccupants is int && request.resource.data.currentOccupants >= 0;
+    }
+
+    function isValidFee() {
+      return hasRequiredFields(['id', 'studentId', 'totalAmount', 'paidAmount', 'balance', 'status', 'dueDate', 'month']) &&
+             isValidEnum('status', ['paid', 'pending', 'partial']) &&
+             request.resource.data.totalAmount is number && request.resource.data.totalAmount >= 0 &&
+             request.resource.data.paidAmount is number && request.resource.data.paidAmount >= 0;
+    }
+
+    function isValidComplaint() {
+      return hasRequiredFields(['id', 'studentId', 'title', 'description', 'status', 'date']) &&
+             isValidString('title', 200) &&
+             isValidString('description', 2000) &&
+             isValidEnum('status', ['pending', 'resolved', 'in-progress']);
+    }
+
+    function isValidAttendance() {
+      return hasRequiredFields(['id', 'studentId', 'type', 'timestamp']) &&
+             isValidEnum('type', ['entry', 'exit']);
+    }
+
+    function isValidAnnouncement() {
+      return hasRequiredFields(['id', 'title', 'content', 'date']) &&
+             isValidString('title', 200) &&
+             isValidString('content', 5000);
+    }
+
+    function isValidExpense() {
+      return hasRequiredFields(['id', 'title', 'amount', 'category', 'date']) &&
+             isValidString('title', 200) &&
+             request.resource.data.amount is number && request.resource.data.amount >= 0 &&
+             isValidEnum('category', ['Groceries', 'Utilities', 'Rent', 'Staff Salary', 'Supplies', 'Other']);
+    }
+
+    function isValidDrawing() {
+      return hasRequiredFields(['id', 'title', 'amount', 'date']) &&
+             isValidString('title', 200) &&
+             request.resource.data.amount is number && request.resource.data.amount >= 0;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+
+      match /students/{studentId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidStudent();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /rooms/{roomNumber} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidRoom();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /fees/{feeId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidFee();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /complaints/{complaintId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidComplaint();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /attendance/{attendanceId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidAttendance();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidAnnouncement();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /expenses/{expenseId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidExpense();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /drawings/{drawingId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidDrawing();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

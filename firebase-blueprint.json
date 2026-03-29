@@ -1,0 +1,152 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "phone": { "type": "string" },
+        "idProof": { "type": "string" },
+        "joinDate": { "type": "string" },
+        "photo": { "type": "string" },
+        "documentProof": { "type": "string" },
+        "parentPhone": { "type": "string" },
+        "workOrCollege": { "type": "string" }
+      },
+      "required": ["id", "name", "roomNumber", "phone", "idProof", "joinDate", "parentPhone", "workOrCollege"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "Room details and occupancy",
+      "type": "object",
+      "properties": {
+        "number": { "type": "string" },
+        "status": { "type": "string", "enum": ["occupied", "vacant", "maintenance"] },
+        "capacity": { "type": "integer" },
+        "currentOccupants": { "type": "integer" },
+        "type": { "type": "string", "enum": ["AC", "Non-AC"] },
+        "amenities": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["number", "status", "capacity", "currentOccupants", "type"]
+    },
+    "Fee": {
+      "title": "Fee",
+      "description": "Fee payment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "balance": { "type": "number" },
+        "status": { "type": "string", "enum": ["paid", "pending", "partial"] },
+        "paymentMode": { "type": "string", "enum": ["Cash", "UPI", "Bank Transfer"] },
+        "dueDate": { "type": "string" },
+        "month": { "type": "string" }
+      },
+      "required": ["id", "studentId", "totalAmount", "paidAmount", "balance", "status", "dueDate", "month"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "Student complaint record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "resolved", "in-progress"] },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "studentId", "title", "description", "status", "date"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Student movement log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "type": { "type": "string", "enum": ["entry", "exit"] },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "studentId", "type", "timestamp"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Hostel announcement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "title", "content", "date"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Hostel expense record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string", "enum": ["Groceries", "Utilities", "Rent", "Staff Salary", "Supplies", "Other"] },
+        "date": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "title", "amount", "category", "date"]
+    },
+    "Drawing": {
+      "title": "Drawing",
+      "description": "Personal drawing record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "title", "amount", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/students": {
+      "schema": "Student",
+      "description": "Collection of students managed by the user"
+    },
+    "/users/{userId}/rooms": {
+      "schema": "Room",
+      "description": "Collection of rooms managed by the user"
+    },
+    "/users/{userId}/fees": {
+      "schema": "Fee",
+      "description": "Collection of fee records"
+    },
+    "/users/{userId}/complaints": {
+      "schema": "Complaint",
+      "description": "Collection of student complaints"
+    },
+    "/users/{userId}/attendance": {
+      "schema": "Attendance",
+      "description": "Collection of attendance logs"
+    },
+    "/users/{userId}/announcements": {
+      "schema": "Announcement",
+      "description": "Collection of announcements"
+    },
+    "/users/{userId}/expenses": {
+      "schema": "Expense",
+      "description": "Collection of hostel expenses"
+    },
+    "/users/{userId}/drawings": {
+      "schema": "Drawing",
+      "description": "Collection of personal drawings"
+    }
+  }
+}
